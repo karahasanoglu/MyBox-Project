@@ -12,7 +12,7 @@
 > **MyBox**, Docker'ın temelindeki teknolojileri (Linux Namespaces, Cgroups, Networking)
 > kullanarak **sıfırdan Go diliyle** yazılmış bir konteyner çalıştırma motorudur.
 > Eğitim ve araştırma amaçlı geliştirilmiştir.
-
+> Docker tabanlıdır.
 ---
 
 ## 📌 İçindekiler
