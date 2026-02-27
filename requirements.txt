@@ -1,0 +1,2 @@
+# Bu proje statik HTML içerir.
+# Python bağımlılığı yoktur.

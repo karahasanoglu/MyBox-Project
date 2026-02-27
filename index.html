@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>MyBox Memory Game</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        h1 { color: #e94560; margin-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 100px); gap: 10px; }
+        .card { width: 100px; height: 100px; background: #16213e; border: 2px solid #0f3460; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 40px; transition: transform 0.3s; }
+        .card.flipped { background: #e94560; transform: rotateY(180deg); }
+        .status { margin-top: 20px; color: #0f3460; background: #fff; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
+        .info { margin-top: 10px; font-size: 12px; opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <h1>MyBox Game</h1>
+    <div class="grid" id="game-grid"></div>
+    <div class="status" id="moves">Hamle: 0</div>
+    <div class="info">Konteyner Port: 80 | Volume: /app</div>
+
+    <script>
+        const icons = ['🚀', '🛡️', '💻', '⚡', '🚀', '🛡️', '💻', '⚡'];
+        let flippedCards = [];
+        let moves = 0;
+        
+        // Kartları karıştır
+        icons.sort(() => Math.random() - 0.5);
+
+        const grid = document.getElementById('game-grid');
+        icons.forEach((icon, index) => {
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.dataset.icon = icon;
+            card.onclick = () => flipCard(card);
+            grid.appendChild(card);
+        });
+
+        function flipCard(card) {
+            if (flippedCards.length < 2 && !card.classList.contains('flipped')) {
+                card.classList.add('flipped');
+                card.innerText = card.dataset.icon;
+                flippedCards.push(card);
+
+                if (flippedCards.length === 2) {
+                    moves++;
+                    document.getElementById('moves').innerText = `Hamle: ${moves}`;
+                    checkMatch();
+                }
+            }
+        }
+
+        function checkMatch() {
+            const [c1, c2] = flippedCards;
+            if (c1.dataset.icon === c2.dataset.icon) {
+                flippedCards = [];
+            } else {
+                setTimeout(() => {
+                    c1.classList.remove('flipped');
+                    c1.innerText = '';
+                    c2.classList.remove('flipped');
+                    c2.innerText = '';
+                    flippedCards = [];
+                }, 1000);
+            }
+        }
+    </script>
+</body>
+</html>
