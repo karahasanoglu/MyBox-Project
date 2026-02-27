@@ -1,17 +1,5 @@
-# Küçük ve yaygın bir Python imajı
-FROM python:3.12-slim
-
-# Çalışma dizini
+FROM alpine:latest
 WORKDIR /app
-
-# Önce requirements (cache için iyi pratik)
-COPY requirements.txt .
-
-# Paket yok ama yine de standart akış:
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Uygulama dosyası
-COPY app.py .
-
-# Varsayılan komut
-CMD ["python", "app.py"]
+COPY index.html .
+COPY server.sh .
+CMD ["/bin/sh", "/app/server.sh"]
