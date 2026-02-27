@@ -1,5 +1,8 @@
-FROM alpine:latest
+FROM alpine
+# Gerekli paketleri (web sunucusu vb.) yükle
+RUN apk add --no-cache python3
+# Proje dosyalarını içine kopyala
+COPY . /app
 WORKDIR /app
-COPY index.html .
-COPY server.sh .
-CMD ["/bin/sh", "/app/server.sh"]
+# Konteyner başlayınca otomatik çalışacak komut
+CMD ["python3", "-m", "http.server", "80"]
