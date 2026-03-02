@@ -1,0 +1,23 @@
+# Build çıktıları ve binary dosyalar (sadece kök dizindeki binary'ler)
+/builder
+/runtime
+*.tar
+
+# Konteyner sistem ve geçici dosyaları
+temp_oci/
+mybox_rootfs/
+**/mybox_rootfs/
+rootfs/
+app/
+/tmp/
+
+# Konteyner durum dosyaları
+/var/lib/mybox/
+
+# Go modül ve sistem dosyaları
+go.sum
+.DS_Store
+*.swp
+*.swo
+*~
+*.log
