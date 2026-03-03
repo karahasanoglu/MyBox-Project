@@ -6,6 +6,32 @@
   },
   "item": [
     {
+      "name": "System",
+      "item": [
+        {
+          "name": "Get System Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:18080/api/v1/system/stats",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "system",
+                "stats"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Containers",
       "item": [
         {
@@ -75,6 +101,37 @@
                 "v1",
                 "containers",
                 "1234"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Container Resources",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memory\": \"512m\",\n  \"cpus\": \"0.5\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:18080/api/v1/containers/1234/resources",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "containers",
+                "1234",
+                "resources"
               ]
             }
           }

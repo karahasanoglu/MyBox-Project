@@ -1,3 +1,6 @@
+# VsCode ayarları 
+.vscode/
+
 # Build çıktıları ve binary dosyalar (sadece kök dizindeki binary'ler)
 /builder
 /runtime

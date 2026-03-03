@@ -6,13 +6,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CORSMiddleware, Masaüstü Web-görünümlerinin (Electron/Tauri) bu yerel API ile iletişim kurabilmesini sağlar.
+// CORSMiddleware, Masaüstü Web-görünümlerinin bu yerel API ile iletişim kurabilmesini sağlar.
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Herhangi bir yerel kaynağa (origin) izin ver (yerel masaüstü uygulamaları için kritik öneme sahip)
+		//Front gelince sadece onun erişimine izin verilmeli
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin")
+
+
 
 		// Preflight OPTIONS isteklerini işle
 		if c.Request.Method == "OPTIONS" {
@@ -34,6 +36,12 @@ func StartAPI() {
 	// API grubu oluştur
 	api := router.Group("/api/v1")
 	{
+		// --- System Management (Yeni) ---
+		system := api.Group("/system")
+		{
+			system.GET("/stats", handlers.GetSystemStatsHandler)   // Host kaynak izleme
+		}
+
 		// --- Container Management Routes ---
 		containers := api.Group("/containers")
 		{
@@ -41,6 +49,7 @@ func StartAPI() {
 			containers.POST("/run", handlers.RunContainerHandler)
 			containers.GET("/:id", handlers.InspectContainerHandler)
 			containers.DELETE("/:id", handlers.StopContainerHandler)
+			containers.PATCH("/:id/resources", handlers.UpdateContainerResourcesHandler)
 		}
 
 		// --- Image Management Routes ---

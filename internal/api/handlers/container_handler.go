@@ -9,16 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"strconv"
+	"time"
 
-	"mybox/internal/builder"
 	"mybox/internal/runtime"
+	"mybox/internal/cgroup"
+	
 
 	"github.com/gin-gonic/gin"
-)
-
-const (
-	ImageDir     = "/var/lib/mybox/images"
-	ContainerDir = "/var/lib/mybox/containers"
 )
 
 // --- Request Payloads ---
@@ -29,12 +27,15 @@ type RunContainerRequest struct {
 	Ports   string   `json:"ports"` // e.g., "8080:80"
 }
 
-type BuildImageRequest struct {
-	Tag     string `json:"tag" binding:"required"`
-	Context string `json:"context" binding:"required"`
+// Kaynak güncelleme istekleri için yapı
+type UpdateResourcesRequest struct {
+	Memory string `json:"memory"` // Örn: "512m", "1g"
+	CPUs   string `json:"cpus"`   // Örn: "0.5", "2"
 }
 
 // --- Container Management Handlers ---
+
+// ListContainersHandler, tüm konteyner durumlarını okuyarak JSON formatında döner
 
 func ListContainersHandler(c *gin.Context) {
 	files, err := os.ReadDir(ContainerDir)
@@ -67,6 +68,8 @@ func ListContainersHandler(c *gin.Context) {
 		"containers": containers,
 	})
 }
+
+// Container çalıştırma işlemi: imageName'e göre image'ı bul, port çakışması kontrolü yap, runtime.Parent içinde çalıştır (arka planda)
 
 func RunContainerHandler(c *gin.Context) {
 	var req RunContainerRequest
@@ -118,6 +121,8 @@ func RunContainerHandler(c *gin.Context) {
 	})
 }
 
+// Container durdurma ve silme işlemi: normal kill dene, başarısız olursa sudo kill'e geri dön (fallback)
+
 func InspectContainerHandler(c *gin.Context) {
 	containerID := c.Param("id")
 	if containerID == "" {
@@ -146,6 +151,8 @@ func InspectContainerHandler(c *gin.Context) {
 	})
 }
 
+// StopContainerHandler, konteyneri güvenli bir şekilde (graceful) durdurmaya çalışır.
+// Yanıt vermezse SIGKILL (9) ile zorla sonlandırır.
 func StopContainerHandler(c *gin.Context) {
 	containerID := c.Param("id")
 	if containerID == "" {
@@ -153,14 +160,20 @@ func StopContainerHandler(c *gin.Context) {
 		return
 	}
 
-	// Normal sonlandırmayı (kill) dene, eğer kök (root) işlem ise sudo kill'e geri dön (fallback)
-	err := exec.Command("kill", "-9", containerID).Run()
+	// 1. İşleme temiz kapanma sinyali (SIGTERM) gönder
+	err := exec.Command("kill", "-15", containerID).Run()
 	if err != nil {
-		err = exec.Command("sudo", "kill", "-9", containerID).Run()
+		exec.Command("sudo", "kill", "-15", containerID).Run()
 	}
 
-	if err != nil {
-		log.Printf("[Error] Failed to kill container %s: %v\n", containerID, err)
+	// 2. Kapanması için 'grace period' bekle
+	time.Sleep(5 * time.Second)
+
+	// 3. Hala yaşıyor mu kontrol et (kill -0)
+	if err := exec.Command("kill", "-0", containerID).Run(); err == nil {
+		log.Printf("[Warning] Konteyner %s graceful kapanmadı, SIGKILL gönderiliyor", containerID)
+		exec.Command("kill", "-9", containerID).Run()
+		exec.Command("sudo", "kill", "-9", containerID).Run()
 	}
 
 	_ = os.Remove(filepath.Join(ContainerDir, containerID+".json"))
@@ -171,98 +184,40 @@ func StopContainerHandler(c *gin.Context) {
 	})
 }
 
-// --- Image Management Handlers ---
+// UpdateContainerResourcesHandler, çalışan bir konteynerin Cgroups v2 limitlerini anlık günceller
+func UpdateContainerResourcesHandler(c *gin.Context) {
+	containerID := c.Param("id")
+	if containerID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Konteyner ID (PID) gerekli"})
+		return
+	}
 
-func ListImagesHandler(c *gin.Context) {
-	files, err := os.ReadDir(ImageDir)
+	// Mevcut mimaride ID, PID ile aynı değeri taşır. Integer dönüşümü yapıyoruz.
+	pid, err := strconv.Atoi(containerID)
 	if err != nil {
-		log.Printf("[Error] Failed to read images directory: %v\n", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list images"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Geçersiz Konteyner ID formatı"})
 		return
 	}
 
-	var images []map[string]interface{}
-	for _, f := range files {
-		if filepath.Ext(f.Name()) != ".tar" {
-			continue
-		}
-		info, err := f.Info()
-		if err != nil {
-			continue
-		}
-
-		name := strings.TrimSuffix(f.Name(), ".tar")
-		sizeMB := info.Size() / (1024 * 1024)
-		if sizeMB == 0 {
-			sizeMB = 1
-		}
-
-		images = append(images, map[string]interface{}{
-			"name":    name,
-			"size":    fmt.Sprintf("%d MB", sizeMB),
-			"created": info.ModTime().Format("2006-01-02 15:04"),
-		})
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Images retrieved successfully",
-		"images":  images,
-	})
-}
-
-func BuildImageHandler(c *gin.Context) {
-	var req BuildImageRequest
+	var req UpdateResourcesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Geçersiz payload formatı", "details": err.Error()})
 		return
 	}
 
-	cleanContext := filepath.Clean(req.Context) // Windows uyumluluğu için
-	dest := filepath.Join(ImageDir, req.Tag+".tar")
-
-	// Frontend zaman aşımını (timeout) önlemek için asenkron yapılandırma (build)
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("[Fatal] Build process panicked: %v\n", r)
-			}
-		}()
-
-		builder.BuildImage(cleanContext, dest)
-	}()
-
-	c.JSON(http.StatusAccepted, gin.H{
-		"message": "Image build triggered in the background",
-		"tag":     req.Tag,
-	})
-}
-
-func RemoveImageHandler(c *gin.Context) {
-	imageName := c.Param("name")
-	if imageName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Image name is required"})
-		return
-	}
-
-	if !strings.HasSuffix(imageName, ".tar") {
-		imageName += ".tar"
-	}
-
-	imagePath := filepath.Join(ImageDir, imageName)
-
-	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Image not found"})
-		return
-	}
-
-	if err := os.Remove(imagePath); err != nil {
-		log.Printf("[Error] Failed to remove image %s: %v\n", imageName, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove image"})
+	// Cgroups limitlerini sistem düzeyinde güncelle
+	if err := cgroup.UpdateCgroups(pid, req.Memory, req.CPUs); err != nil {
+		log.Printf("[Error] Failed to update cgroups for PID %d: %v\n", pid, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Kaynak limitleri güncellenemedi",
+			"details": err.Error(),
+		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Image removed successfully",
-		"image":   strings.TrimSuffix(imageName, ".tar"),
+		"message": "Konteyner kaynakları başarıyla güncellendi",
+		"id":      containerID,
+		"applied": req,
 	})
 }
