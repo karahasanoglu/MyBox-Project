@@ -2,89 +2,59 @@ package builder
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func pullAndExtractImage(imageName, targetDir string) error {
-	fmt.Printf("[*] %s imajı Docker Hub'dan çekiliyor (Skopeo)...\n", imageName)
+	cacheRoot := "/var/lib/mybox/cache"
+	imageSlug := strings.ReplaceAll(imageName, ":", "_")
+	imageCacheDir := filepath.Join(cacheRoot, imageSlug)
 
-	tempDir := "./temp_oci"
-	os.MkdirAll(tempDir, 0755)
-	defer os.RemoveAll(tempDir)
-
-	// Bu komut manifest ve layer'ları parçalanmış halde getirir
-	cmd := exec.Command("skopeo", "copy", "docker://"+imageName, "dir:"+tempDir)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("imaj çekilemedi: %v", err)
+	// Eğer cache yoksa çek (Sadeleşmiş sürüm)
+	if _, err := os.Stat(imageCacheDir); err != nil {
+		fmt.Printf("[*] %s imajı Docker Hub'dan çekiliyor (Skopeo)...\n", imageName)
+		os.MkdirAll(imageCacheDir, 0755)
+		cmd := exec.Command("skopeo", "copy", "docker://"+imageName, "dir:"+imageCacheDir)
+		if err := cmd.Run(); err != nil {
+			os.RemoveAll(imageCacheDir)
+			return err
+		}
+	} else {
+		fmt.Printf("[*] %s imajı yerel önbellekten (cache) kullanılıyor...\n", imageName)
 	}
 
-	// İmajın içindeki tüm .tar.gz (layer) dosyalarını bul ve sırayla targetDir'e aç
-	files, _ := os.ReadDir(tempDir)
+	// Katmanları aç
+	files, _ := os.ReadDir(imageCacheDir)
 	for _, file := range files {
-
 		if !file.IsDir() && len(file.Name()) > 10 {
-			fmt.Printf("   > Katman açılıyor: %s\n", file.Name()[:12])
-			layerPath := filepath.Join(tempDir, file.Name())
-
+			if strings.HasSuffix(file.Name(), ".json") || file.Name() == "version" {
+				continue
+			}
+			layerPath := filepath.Join(imageCacheDir, file.Name())
 			exec.Command("tar", "-xf", layerPath, "-C", targetDir).Run()
 		}
 	}
 	return nil
 }
 
-func downloadImage(url, dest string) error {
-	fmt.Printf("Imaj merkezi depoda bulunamadı, indiriliyor: %s...\n", url)
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("indirme hatası: %s", resp.Status)
-	}
-
-	out, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	return err
-}
-
-func extractTar(tarFile, targetDir string) error {
-	cmd := exec.Command("tar", "-xf", tarFile, "-C", targetDir)
-	return cmd.Run()
-}
-
-func saveAsImage(sourceDir, imagePath string) error {
-	fmt.Printf("Imaj paketleniyor: %s\n", imagePath)
-	// --no-same-owner: çıkarırken root sahipliği zorunlu kılmaz
-	cmd := exec.Command("sudo", "tar", "-cf", imagePath,
-		"--no-same-owner",
-		"-C", sourceDir, ".")
-	return cmd.Run()
-}
-
 func BuildImage(buildContext, imagePath string) {
-	myBoxFilePath := filepath.Join(buildContext, "MyBoxFile")
-	workDir := filepath.Join(buildContext, "mybox_rootfs")
-
-	// MERKEZİ DEPO AYARI
-	homedir, _ := os.UserHomeDir()
-	imageStore := filepath.Join(homedir, ".mybox", "images")
-	os.MkdirAll(imageStore, 0755)
-
+	absContext, _ := filepath.Abs(buildContext)
+	myBoxFilePath := filepath.Join(absContext, "MyBoxFile")
+	
+	// SALTED BUILD: Proje yoluna özel benzersiz build dizini
+	// Bu sayede farklı projeler birbirinin build dosyalarını kirletemez.
+	h := sha256.New()
+	h.Write([]byte(absContext))
+	buildHash := hex.EncodeToString(h.Sum(nil))[:8]
+	workDir := filepath.Join("/tmp", "mybox_build_"+buildHash)
+	
 	file, err := os.Open(myBoxFilePath)
 	if err != nil {
 		fmt.Printf("Hata: %s bulunamadı\n", myBoxFilePath)
@@ -93,9 +63,11 @@ func BuildImage(buildContext, imagePath string) {
 	defer file.Close()
 
 	fmt.Println("---- MyBox Build Başladı ----")
+	safeCleanup(workDir)
+	os.MkdirAll(workDir, 0755)
+	defer safeCleanup(workDir)
 
 	currentWorkingDir := "/"
-
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -114,35 +86,13 @@ func BuildImage(buildContext, imagePath string) {
 		switch instruction {
 		case "FROM":
 			fmt.Printf("[1] %s imajı hazırlanıyor...\n", argument)
-			os.RemoveAll(workDir)
-			os.MkdirAll(workDir, 0755)
-
-			// imaj dosyaları docker hub'tan çekiliyor sabit bir sözlük yok
-			err := pullAndExtractImage(argument, workDir)
-			if err != nil {
-				fmt.Printf("Hata: %v\n", err)
-				return
-			}
+			pullAndExtractImage(argument, workDir)
 
 		case "WORKDIR":
 			fmt.Printf("[*] WORKDIR ayarlanıyor: %s\n", argument)
 			currentWorkingDir = argument
-			absWorkDir := filepath.Join(workDir, currentWorkingDir)
-			os.MkdirAll(absWorkDir, 0755)
-			// Runtime'ın doğru dizini bilmesi için kaydet
+			os.MkdirAll(filepath.Join(workDir, currentWorkingDir), 0755)
 			os.WriteFile(filepath.Join(workDir, ".mybox_workdir"), []byte(argument), 0644)
-
-		case "RUN":
-			fmt.Printf("[2] Komut çalıştırılıyor: %s\n", argument)
-			// İnternet erişimi için DNS ayarlarını kopyala
-			dnsPath := filepath.Join(workDir, "etc/resolv.conf")
-			os.MkdirAll(filepath.Dir(dnsPath), 0755)
-			exec.Command("cp", "/etc/resolv.conf", dnsPath).Run()
-
-			cmd := exec.Command("sudo", "chroot", workDir, "/bin/sh", "-c", "cd "+currentWorkingDir+" && "+argument)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.Run()
 
 		case "COPY":
 			fmt.Printf("[3] Dosya kopyalanıyor: %s\n", argument)
@@ -151,77 +101,65 @@ func BuildImage(buildContext, imagePath string) {
 				continue
 			}
 
-			srcPath := filepath.Join(buildContext, copyParts[0])
-			dstPath := copyParts[1]
-
-			// Eğer hedef yol '/' ile başlıyorsa mutlak yoldur (root'a göredir)
-			// değilse WORKDIR'e göredir.
-			var finalDstInRootfs string
-			if filepath.IsAbs(dstPath) {
-				finalDstInRootfs = filepath.Join(workDir, dstPath)
-			} else {
-				finalDstInRootfs = filepath.Join(workDir, currentWorkingDir, dstPath)
+			src := filepath.Join(absContext, copyParts[0])
+			dstName := copyParts[1]
+			dst := filepath.Join(workDir, currentWorkingDir, dstName)
+			if filepath.IsAbs(dstName) {
+				dst = filepath.Join(workDir, dstName)
 			}
 
-			// Hedefin üst dizinini oluştur
-			os.MkdirAll(filepath.Dir(finalDstInRootfs), 0755)
+			os.MkdirAll(filepath.Dir(dst), 0755)
 
-			var copyErr error
-			if info, err := os.Stat(srcPath); err == nil && info.IsDir() {
-				// Dizin kopyalama: mybox_rootfs ve .tar dosyalarını hariç tut
-				os.MkdirAll(finalDstInRootfs, 0755)
-				// rsync varsa kullan, yoksa find+cp kullan
-				rsyncCmd := exec.Command("rsync", "-a",
-					"--exclude=mybox_rootfs",
-					"--exclude=*.tar",
-					"--exclude=.git",
-					srcPath+"/", finalDstInRootfs+"/")
-				if copyErr = rsyncCmd.Run(); copyErr != nil {
-					// rsync yoksa cp ile dene (yine de mybox_rootfs hariç)
-					fmt.Printf("   [*] rsync bulunamadı, cp kullanılıyor\n")
-					entries, _ := os.ReadDir(srcPath)
-					for _, entry := range entries {
-						if entry.Name() == "mybox_rootfs" || entry.Name() == "temp_oci" {
-							continue
-						}
-						if strings.HasSuffix(entry.Name(), ".tar") {
-							continue
-						}
-						src := filepath.Join(srcPath, entry.Name())
-						cpCmd := exec.Command("cp", "-r", src, finalDstInRootfs)
-						if err := cpCmd.Run(); err != nil {
-							fmt.Printf("   Uyarı: %s kopyalanamadı: %v\n", entry.Name(), err)
-						}
-					}
-					copyErr = nil // tek tek kopyaladık
+			// TEMIZ KOPYALAMA: Build kirliliğini ve gereksiz klasörleri engelle
+			if copyParts[0] == "." {
+				// rsync varsa rsync kullan (daha güvenli), yoksa cp
+				if err := exec.Command("rsync", "-a", "--exclude", "mybox_rootfs*", src+"/", dst+"/").Run(); err != nil {
+					exec.Command("sh", "-c", "cp -rp "+src+"/* "+dst+"/ 2>/dev/null || true").Run()
 				}
 			} else {
-				// Tek dosya kopyalama
-				copyErr = exec.Command("cp", "-r", srcPath, finalDstInRootfs).Run()
+				exec.Command("cp", "-rp", src, dst).Run()
 			}
 
-			if copyErr != nil {
-				fmt.Printf("Kopyalama hatası: %v\n", copyErr)
-			} else {
-				// Kopyalanan dosyaların erişilebilir/çalıştırılabilir olmasını garantile
-				exec.Command("chmod", "-R", "755", finalDstInRootfs).Run()
-			}
+		case "RUN":
+			fmt.Printf("[2] Komut çalıştırılıyor: %s\n", argument)
+			// DNS ve Proc mount (Basit sürüm)
+			dns := filepath.Join(workDir, "etc/resolv.conf")
+			os.MkdirAll(filepath.Dir(dns), 0755)
+			exec.Command("cp", "/etc/resolv.conf", dns).Run()
+			
+			proc := filepath.Join(workDir, "proc")
+			os.MkdirAll(proc, 0755)
+			exec.Command("mount", "-t", "proc", "proc", proc).Run()
+			
+			cmd := exec.Command("chroot", workDir, "/bin/sh", "-c", "cd "+currentWorkingDir+" && "+argument)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Run()
+			
+			exec.Command("umount", "-l", proc).Run()
 
 		case "CMD":
 			fmt.Printf("[*] Başlangıç komutu belirlendi: %s\n", argument)
-
 			os.WriteFile(filepath.Join(workDir, ".mybox_entrypoint"), []byte(argument), 0644)
-
-		case "EXPOSE":
-			fmt.Printf("[*] Port bilgilendirmesi: %s\n", argument)
 		}
 	}
 
 	fmt.Println("\n---- MyBox Build İşlemi Tamamlandı!! ----")
+	cmd := exec.Command("tar", "-cf", imagePath, "-C", workDir, ".")
+	cmd.Run()
+	fmt.Printf("Imaj başarıyla oluşturuldu: %s\n", imagePath)
+}
 
-	if err := saveAsImage(workDir, imagePath); err != nil {
-		fmt.Printf("Hata: %v\n", err)
-	} else {
-		fmt.Printf("Imaj başarıyla oluşturuldu: %s\n", imagePath)
+func safeCleanup(path string) {
+	if path == "" || path == "/" { return }
+	data, _ := os.ReadFile("/proc/mounts")
+	lines := strings.Split(string(data), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		fields := strings.Fields(lines[i])
+		if len(fields) > 1 && strings.HasPrefix(fields[1], path) {
+			exec.Command("umount", "-l", fields[1]).Run()
+		}
 	}
+	time.Sleep(100 * time.Millisecond)
+	os.RemoveAll(path)
 }

@@ -1,0 +1,19 @@
+# Binaries
+mybox
+
+# Temporary Rootfs
+mybox_rootfs*
+
+# Logs
+*.log
+build_log.txt
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Go specific
+vendor/
+*.exe
+*.test
+*.out

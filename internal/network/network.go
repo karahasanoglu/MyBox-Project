@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"strings"
 )
 
 // SetupBridge köprü arayüzü yoksa oluşturur ve bir IP adresi atar.
@@ -125,12 +126,13 @@ func SetupNAT(bridgeName string) error {
 		exec.Command("iptables", "-t", "nat", "-A", "POSTROUTING", "-s", "10.0.0.0/8", "!", "-o", bridgeName, "-j", "MASQUERADE").Run()
 	}
 
-	// FORWARD: Bridge üzerinden geçen paketlere izin ver (Docker ile aynı kural)
-	// Bu olmadan host → container port forwarding çalışmaz!
-	exec.Command("iptables", "-C", "FORWARD", "-i", bridgeName, "-j", "ACCEPT").Run()
-	exec.Command("iptables", "-A", "FORWARD", "-i", bridgeName, "-j", "ACCEPT").Run()
-	exec.Command("iptables", "-C", "FORWARD", "-o", bridgeName, "-j", "ACCEPT").Run()
-	exec.Command("iptables", "-A", "FORWARD", "-o", bridgeName, "-j", "ACCEPT").Run()
+	// FORWARD: Bridge üzerinden geçen paketlere izin ver (Cerrahi Check)
+	if exec.Command("iptables", "-C", "FORWARD", "-i", bridgeName, "-j", "ACCEPT").Run() != nil {
+		exec.Command("iptables", "-A", "FORWARD", "-i", bridgeName, "-j", "ACCEPT").Run()
+	}
+	if exec.Command("iptables", "-C", "FORWARD", "-o", bridgeName, "-j", "ACCEPT").Run() != nil {
+		exec.Command("iptables", "-A", "FORWARD", "-o", bridgeName, "-j", "ACCEPT").Run()
+	}
 
 	return nil
 }
@@ -142,18 +144,46 @@ func SetupPortForwarding(hostPort, contIP, contPort string) error {
 	// IP yönlendirmenin etkin olduğundan emin ol
 	exec.Command("sysctl", "-w", "net.ipv4.ip_forward=1").Run()
 
+	// Önce o portla ilgili TÜM eski kuralları temizle (Nuclear Cleanup)
+	purgePortRules(hostPort)
+
 	// 1. PREROUTING: Dışarıdan gelen trafik için
-	exec.Command("iptables", "-t", "nat", "-D", "PREROUTING", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
 	exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
 
 	// 2. OUTPUT: Host makinenin kendinden gelen trafik için
-	exec.Command("iptables", "-t", "nat", "-D", "OUTPUT", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
 	exec.Command("iptables", "-t", "nat", "-I", "OUTPUT", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
 
-	// 3. POSTROUTING: Yanıtın doğru dönmesi için paket maskeleme
-	exec.Command("iptables", "-t", "nat", "-D", "POSTROUTING", "-p", "tcp", "--dst", contIP, "--dport", contPort, "-j", "MASQUERADE").Run()
+	// 3. POSTROUTING: Yanıtın doğru dönmesi için paket maskeleme (ContPort'a Duyarlı)
+	// Önce temizle ki mükerrer kural olmasın
+	exec.Command("sh", "-c", fmt.Sprintf("iptables -t nat -S POSTROUTING | grep \"--dst %s/32\" | grep \"dport %s \" | sed 's/-A/-D/' | xargs -L 1 iptables -t nat 2>/dev/null", contIP, contPort)).Run()
 	exec.Command("iptables", "-t", "nat", "-I", "POSTROUTING", "-p", "tcp", "--dst", contIP, "--dport", contPort, "-j", "MASQUERADE").Run()
 
+	return nil
+}
+
+// purgePortRules belirtilen host portuna ait tüm eski iptables kurallarını kazır.
+func purgePortRules(port string) {
+	// 1. PREROUTING ve OUTPUT için temizlik (Host Portuna göre)
+	for _, chain := range []string{"PREROUTING", "OUTPUT"} {
+		for i := 0; i < 20; i++ {
+			cmd := fmt.Sprintf("iptables -t nat -S %s | grep \"dport %s \" | head -n 1 | sed 's/-A/-D/'", chain, port)
+			out, _ := exec.Command("sh", "-c", cmd).Output()
+			ruleD := strings.TrimSpace(string(out))
+			if ruleD == "" || !strings.Contains(ruleD, "-D") { break }
+			exec.Command("sh", "-c", "iptables -t nat "+ruleD).Run()
+		}
+	}
+	// 2. POSTROUTING için temizlik (Nuclear: Eski MASQUERADE kurallarını temizle)
+	// Burada port bilgisi değişken olabildiği için en son eklenen geçersiz kuralları temizliyoruz
+	exec.Command("sh", "-c", "iptables -t nat -S POSTROUTING | grep \"MASQUERADE\" | grep \"tcp\" | grep \"dport 80 \" | sed 's/-A/-D/' | xargs -L 1 iptables -t nat 2>/dev/null").Run()
+}
+
+// RemovePortForwarding konteyner durduğunda ilgili iptables kurallarını siler.
+func RemovePortForwarding(hostPort, contIP, contPort string) error {
+	if hostPort == "" {
+		return nil
+	}
+	purgePortRules(hostPort)
 	return nil
 }
 

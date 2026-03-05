@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	// Modül adın 'mybox' olduğu için yollar bu şekilde olmalı
 	"mybox/internal/builder"
@@ -19,6 +21,7 @@ const (
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	if len(os.Args) < 2 {
 		printHelp()
 		return
@@ -73,19 +76,12 @@ func handleInstall() {
 func handleBuild(args []string) {
 	tag := "latest"
 	context := "."
-	for i, arg := range args {
-		if arg == "-t" && i+1 < len(args) {
-			// -t flag ile: mybox build -t isim .
+	for i := 0; i < len(args); i++ {
+		if args[i] == "-t" && i+1 < len(args) {
 			tag = args[i+1]
-			if i+2 < len(args) && !strings.HasPrefix(args[i+2], "-") {
-				context = args[i+2]
-			}
-		} else if !strings.HasPrefix(arg, "-") && i > 0 && args[i-1] != "-t" {
-			// Pozisyonel arg: mybox build isim
-			tag = arg
-		} else if !strings.HasPrefix(arg, "-") && i == 0 {
-			// İlk arg doğrudan isim: mybox build isim
-			tag = arg
+			i++ // tag'i atla
+		} else if !strings.HasPrefix(args[i], "-") {
+			context = args[i]
 		}
 	}
 	dest := filepath.Join(ImageDir, tag+".tar")
@@ -100,23 +96,40 @@ func handleRun(args []string) {
 		return
 	}
 
-	imageName := args[len(args)-1]
+	var imageName string
+	var containerArgs []string
+	var flags []string
+
+	// Bayrakları ve İmaj adını ayır
+	for i := 0; i < len(args); i++ {
+		if strings.HasPrefix(args[i], "-") {
+			flags = append(flags, args[i])
+			if i+1 < len(args) && (args[i] == "-p" || args[i] == "--memory" || args[i] == "-v") {
+				flags = append(flags, args[i+1])
+				i++
+			}
+			continue
+		}
+		if imageName == "" {
+			imageName = args[i]
+			containerArgs = args[i+1:]
+			break
+		}
+	}
+
+	if imageName == "" {
+		fmt.Println("Hata: İmaj adı bulunamadı.")
+		return
+	}
+
 	if !strings.HasSuffix(imageName, ".tar") {
 		imageName += ".tar"
 	}
 	imagePath := filepath.Join(ImageDir, imageName)
 
-	// start.sh yetkilerini otomatik düzelt (Permission Denied Çözümü)
-	currentDir, _ := os.Getwd()
-	scriptPath := filepath.Join(currentDir, "start.sh")
-	if _, err := os.Stat(scriptPath); err == nil {
-		os.Chmod(scriptPath, 0755)
-	}
-
 	fmt.Printf("[*] Konteyner başlatılıyor: %s\n", imageName)
-
-	// HATA ÇÖZÜLDÜ: imagePath artık Parent fonksiyonunda kullanılıyor
-	runtime.Parent(args, imagePath)
+	// Parent'a hem bayrakları hem de iç komutları ayrı ayrı gönder
+	runtime.Parent(flags, imagePath, containerArgs)
 }
 
 func handlePS() {
