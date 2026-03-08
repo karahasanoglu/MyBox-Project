@@ -302,6 +302,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         addLog('Logs cleared.', 'info');
     });
 
+    const checkAPIStatus = async () => {
+        try {
+            await App.ListContainers();
+            const status = document.getElementById('api-status');
+            if (status) {
+                status.innerText = 'Online';
+                status.className = 'status-badge online';
+            }
+        } catch (e) {
+            const status = document.getElementById('api-status');
+            if (status) {
+                status.innerText = 'Offline';
+                status.className = 'status-badge offline';
+            }
+            addLog("Engine not reachable! Run 'sudo bash launch.sh' or 'mybox serve'", "error");
+        }
+    };
+
+    setInterval(checkAPIStatus, 5000);
+    checkAPIStatus();
+
     addLog('System ready.', 'success');
     loadContainers();
     loadImages();

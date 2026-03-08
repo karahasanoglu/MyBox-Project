@@ -9,13 +9,14 @@ import (
 	"mybox/internal/network"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// App yapısı, uygulama durumunu ve HTTP istemcisini tutar
+// App structure to hold context and http client
 type App struct {
 	ctx        context.Context
 	httpClient *http.Client
@@ -52,9 +53,34 @@ func NewApp() *App {
 	}
 }
 
+// ensureAPI checks if the engine is running, starts it if not.
+func (a *App) ensureAPI() {
+	// Simple health check call
+	req, _ := http.NewRequest(http.MethodGet, a.baseURL+"/containers", nil)
+	resp, err := a.httpClient.Do(req)
+	if err == nil && resp.StatusCode == 200 {
+		resp.Body.Close()
+		return
+	}
+
+	// If the API isn't responding, launch 'mybox serve' in the background.
+	go func() {
+		binPath := "mybox"
+		if _, err := os.Stat("/usr/local/bin/mybox"); err == nil {
+			binPath = "/usr/local/bin/mybox"
+		}
+		cmd := exec.Command(binPath, "serve")
+		_ = cmd.Run()
+	}()
+
+	// Brief pause for the motor to start
+	time.Sleep(2 * time.Second)
+}
+
 // startup, arayüz hazır olduğunda tetiklenir
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.ensureAPI()
 }
 
 // requestHelper, tüm HTTP çağrılarını yöneten merkezi fonksiyondur
