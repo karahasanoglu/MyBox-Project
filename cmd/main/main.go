@@ -35,6 +35,7 @@ func main() {
 	case "images":
 		handleImages()
 	case "build":
+		requireRoot()
 		handleBuild(args)
 	case "run":
 		handleRun(args)
@@ -43,10 +44,11 @@ func main() {
 	case "stop":
 		handleStop(args)
 	case "rmi":
+		requireRoot()
 		handleRMI(args)
 	case "child":
 		runtime.Child()
-	case "--version", "-version", "version":
+	case "-version", "--version", "version":
 		fmt.Printf("MyBox Version: %s\n", Version)
 	case "serve":
 		requireRoot()
@@ -63,7 +65,13 @@ func requireRoot() {
 		return // Zaten root
 	}
 
-	absPath, _ := filepath.Abs(os.Args[0])
+	absPath := os.Args[0]
+	if !filepath.IsAbs(absPath) {
+		if lookPath, err := exec.LookPath(absPath); err == nil {
+			absPath = lookPath
+		}
+	}
+
 	fmt.Println("[*] Root yetkisi gerekiyor, sudo ile yeniden başlatılıyor...")
 	cmd := exec.Command("sudo", append([]string{absPath}, os.Args[1:]...)...)
 	cmd.Stdin = os.Stdin
@@ -96,7 +104,6 @@ func handleInstall() {
 
 // --- KOMUTLAR ---
 func handleBuild(args []string) {
-	requireRoot()
 	tag := "latest"
 	context := "."
 	for i, arg := range args {

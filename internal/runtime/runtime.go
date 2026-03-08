@@ -325,7 +325,7 @@ func RemoveContainer(pidStr string) {
 	}
 
 	// 1. Önce normal kill dene
-	killErr := exec.Command("kill", "-9", pidStr).Run()
+	killErr := exec.Command("sudo", "kill", "-9", pidStr).Run()
 
 	// 2. Port Yönlendirmeyi Temizle
 	if state.HostPort != "" {

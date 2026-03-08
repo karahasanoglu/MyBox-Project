@@ -65,21 +65,14 @@ func (a *App) ensureAPI() {
 
 	// If the API isn't responding, launch 'mybox serve' in the background.
 	go func() {
-		// 1. Try SAME directory as this dashboard
-		execPath, _ := os.Executable()
-		localBin := filepath.Join(filepath.Dir(execPath), "mybox")
-
 		binPath := "mybox"
-		if _, err := os.Stat(localBin); err == nil {
-			binPath = localBin
-		} else if _, err := os.Stat("/usr/local/bin/mybox"); err == nil {
+		if _, err := os.Stat("/usr/local/bin/mybox"); err == nil {
 			binPath = "/usr/local/bin/mybox"
 		}
 
-		fmt.Printf("[*] Starting MyBox Engine from: %s\n", binPath)
-		cmd := exec.Command(binPath, "serve")
+		fmt.Printf("[*] Starting MyBox Engine via pkexec: %s\n", binPath)
+		cmd := exec.Command("pkexec", binPath, "serve")
 
-		// Log output to help debug background issues
 		logFile, _ := os.OpenFile("/tmp/mybox-engine.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 		if logFile != nil {
 			cmd.Stdout = logFile
