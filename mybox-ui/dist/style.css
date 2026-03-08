@@ -1,0 +1,169 @@
+:root {
+    --bg-color: #1e1e2e;
+    --text-color: #cdd6f4;
+    --btn-primary: #89b4fa;
+    --btn-success: #a6e3a1;
+    --btn-danger: #f38ba8;
+    --panel-bg: #11111b;
+    --border-color: #313244;
+}
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.tab-btn {
+    background: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    opacity: 0.7;
+}
+
+.tab-btn.active {
+    background-color: var(--panel-bg);
+    opacity: 1;
+    border-bottom-color: var(--panel-bg);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Actions & Buttons */
+.actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    background: var(--panel-bg);
+    padding: 10px;
+    border-radius: 8px;
+    align-items: center;
+}
+
+input[type="text"] {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    width: 250px;
+}
+
+button {
+    background-color: var(--btn-primary);
+    color: #11111b;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+
+button:hover { opacity: 0.8; }
+.btn-success { background-color: var(--btn-success); }
+.btn-danger { background-color: var(--btn-danger); }
+
+/* Panels */
+.output-panel, .log-panel {
+    background-color: var(--panel-bg);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.log-panel {
+    height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.log-entry {
+    padding: 8px;
+    border-radius: 4px;
+    background: var(--bg-color);
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.log-entry.info { border-left: 3px solid var(--btn-primary); }
+.log-entry.success { border-left: 3px solid var(--btn-success); }
+.log-entry.error { border-left: 3px solid var(--btn-danger); }
+.log-entry.warning { border-left: 3px solid #f9e2af; }
+
+pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: monospace;
+}
+
+/* Tablo Tasarımı */
+.table-container {
+    background-color: var(--panel-bg);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 15px;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    color: var(--btn-primary);
+    font-weight: 600;
+}
+
+tr:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+
+.badge.running { background-color: var(--btn-success); color: #11111b; }
+.badge.stopped { background-color: var(--btn-danger); color: #11111b; }
+
+.btn-sm {
+    padding: 6px 10px;
+    font-size: 0.85em;
+}

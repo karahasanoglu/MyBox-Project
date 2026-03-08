@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MyBox Manager</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>MyBox Kontrol Paneli</h2>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-target="containers-tab">Konteynerler</button>
+            <button class="tab-btn" data-target="images-tab">İmajlar</button>
+            <button class="tab-btn" data-target="logs-tab">Sistem Logları</button>
+        </div>
+
+        <div id="containers-tab" class="tab-content active">
+            <div class="actions">
+                <button id="btn-refresh-containers">Yenile</button>
+                <button id="btn-run-modal" class="btn-success">Konteyner Başlat</button>
+            </div>
+
+            <div class="actions input-group" id="run-container-group" style="display: none; flex-wrap: wrap;">
+                <input type="text" id="run-image-input" placeholder="İmaj (örn: alpine)">
+                <input type="text" id="run-port-input" placeholder="Port (8080:80)">
+                <input type="text" id="run-mem-input" placeholder="RAM (512m)">
+                <input type="text" id="run-cpu-input" placeholder="CPU (0.5)">
+                <button id="btn-run-submit" class="btn-primary">Başlat</button>
+            </div>
+
+            <table id="containers-table">
+                <thead>
+                    <tr>
+                        <th>PID</th>
+                        <th>İmaj</th>
+                        <th>IP</th>
+                        <th>Portlar</th>
+                        <th>Kaynaklar (M/C)</th>
+                        <th>Durum</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="images-tab" class="tab-content">
+            <div class="actions">
+                <button id="btn-refresh-images">Yenile</button>
+            </div>
+
+            <div class="actions input-group">
+                <input type="text" id="build-tag-input" placeholder="İmaj Adı (örn: myapp)">
+                <input type="text" id="build-dir-input" placeholder="Klasör Yolu">
+                <button id="btn-select-dir">Gözat</button>
+                <button id="btn-build" class="btn-primary">Build Et</button>
+            </div>
+
+            <div class="table-container">
+                <table id="images-table">
+                    <thead>
+                        <tr>
+                            <th>İmaj Adı</th>
+                            <th>Boyut</th>
+                            <th>Oluşturulma</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="logs-tab" class="tab-content">
+            <div class="actions">
+                <button id="btn-clear-logs" class="btn-danger">Logları Temizle</button>
+            </div>
+            <div class="log-panel" id="log-container"></div>
+        </div>
+    </div>
+
+    <script src="./main.js" type="module"></script>
+</body>
+</html>

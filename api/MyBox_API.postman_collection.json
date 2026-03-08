@@ -1,0 +1,239 @@
+{
+  "info": {
+    "name": "MyBox API",
+    "description": "API endpoints for managing MyBox containers and images.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Get System Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:18080/api/v1/system/stats",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "system",
+                "stats"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Containers",
+      "item": [
+        {
+          "name": "List Containers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:18080/api/v1/containers",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "containers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Run Container",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"alpine:latest\",\n  \"command\": [\"python3\", \"-m\", \"http.server\", \"80\"],\n  \"ports\": \"18080:80\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:18080/api/v1/containers/run",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "containers",
+                "run"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inspect Container",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:18080/api/v1/containers/1234",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "containers",
+                "1234"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Container Resources",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memory\": \"512m\",\n  \"cpus\": \"0.5\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:18080/api/v1/containers/1234/resources",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "containers",
+                "1234",
+                "resources"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Stop Container",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:18080/api/v1/containers/1234",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "containers",
+                "1234"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Images",
+      "item": [
+        {
+          "name": "List Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:18080/api/v1/images",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "images"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Build Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tag\": \"my-web-app:v1\",\n  \"context\": \"/path/to/my/project\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:18080/api/v1/images/build",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "images",
+                "build"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove Image",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:18080/api/v1/images/my-web-app",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "18080",
+              "path": [
+                "api",
+                "v1",
+                "images",
+                "my-web-app"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

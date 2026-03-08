@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyBox - Container Runtime & Manager</title>
+    <meta name="description"
+        content="MyBox is a powerful container runtime and desktop manager application. Run your containers effortlessly.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+    <div class="background-effect"></div>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-icon"></div>
+            MyBox
+        </div>
+        <nav>
+            <a href="#features">Features</a>
+            <a href="#cli">CLI</a>
+            <a href="#desktop">Desktop App</a>
+        </nav>
+        <button class="nav-cta" onclick="document.getElementById('cli').scrollIntoView();">Install Now</button>
+    </header>
+
+    <main>
+        <section class="hero" id="hero">
+            <h1 class="hero-title">Containers <span class="text-gradient">Simplified.</span></h1>
+            <p class="hero-subtitle">
+                The ultimate container runtime and graphical dashboard. Manage images, run isolated environments, and
+                launch your infrastructure with unprecedented speed—from the terminal or the desktop app.
+            </p>
+            <div class="hero-buttons">
+                <a href="#cli" class="btn btn-primary">Install CLI</a>
+                <a href="#desktop" class="btn btn-secondary">Download Desktop App</a>
+            </div>
+        </section>
+
+        <section class="install-section" id="cli">
+            <div class="install-card glossy">
+                <div class="card-icon">💻</div>
+                <h2>MyBox CLI</h2>
+                <p>Install the core container runtime directly via terminal. Requires sudo privileges to set up routing
+                    and namespaces.</p>
+
+                <div class="code-box">
+                    <div class="code-header">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                        <span class="code-title">Terminal</span>
+                    </div>
+                    <div class="code-content">
+                        <code
+                            id="install-command">curl -sSL https://raw.githubusercontent.com/karahasanoglu/MyBox-Project/version-1.0.6/install.sh | sudo bash</code>
+                        <button class="copy-btn" onclick="copyCode()">Copy</button>
+                    </div>
+                </div>
+                <ul class="feature-list">
+                    <li>🚀 Ultra-fast container startup</li>
+                    <li>🌐 Automatic IP and port forwarding</li>
+                    <li>📦 Custom image building (MyBoxFile)</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="install-section" id="desktop">
+            <div class="install-card glossy accent">
+                <div class="card-icon">🖥️</div>
+                <h2>MyBox Manager (Desktop)</h2>
+                <p>Prefer a graphical interface? Download the MyBox Manager to monitor, start, and stop your containers
+                    with a single click. Available for Linux.</p>
+
+                <a href="#" class="btn btn-primary btn-large download-app-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download AppImage (64-bit)
+                </a>
+
+                <ul class="feature-list mt-2">
+                    <li>📊 Visual dashboard for container health</li>
+                    <li>⚡ One-click start/stop</li>
+                    <li>🔍 Real-time logs and statistics</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 MyBox Container Project. Built for the modern developer.</p>
+    </footer>
+
+    <script>
+        function copyCode() {
+            const codeText = document.getElementById('install-command').innerText;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.innerText;
+                btn.innerText = 'Copied!';
+                btn.style.background = 'rgba(74, 222, 128, 0.2)';
+                btn.style.color = '#4ade80';
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                    btn.style.color = 'white';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>
