@@ -148,15 +148,15 @@ func SetupPortForwarding(hostPort, contIP, contPort string) error {
 	purgePortRules(hostPort)
 
 	// 1. PREROUTING: Dışarıdan gelen trafik için
-	exec.Command("/usr/sbin/iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
+	exec.Command("sudo", "/usr/sbin/iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
 
 	// 2. OUTPUT: Host makinenin kendinden gelen trafik için
-	exec.Command("/usr/sbin/iptables", "-t", "nat", "-I", "OUTPUT", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
+	exec.Command("sudo", "/usr/sbin/iptables", "-t", "nat", "-I", "OUTPUT", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
 
 	// 3. POSTROUTING: Yanıtın doğru dönmesi için paket maskeleme (ContPort'a Duyarlı)
 	// Önce temizle ki mükerrer kural olmasın
-	exec.Command("sh", "-c", fmt.Sprintf("/usr/sbin/iptables -t nat -S POSTROUTING | grep \"--dst %s/32\" | grep \"dport %s \" | sed 's/-A/-D/' | xargs -L 1 /usr/sbin/iptables -t nat 2>/dev/null", contIP, contPort)).Run()
-	exec.Command("/usr/sbin/iptables", "-t", "nat", "-I", "POSTROUTING", "-p", "tcp", "--dst", contIP, "--dport", contPort, "-j", "MASQUERADE").Run()
+	exec.Command("sudo", "sh", "-c", fmt.Sprintf("/usr/sbin/iptables -t nat -S POSTROUTING | grep \"--dst %s/32\" | grep \"dport %s \" | sed 's/-A/-D/' | xargs -L 1 /usr/sbin/iptables -t nat 2>/dev/null", contIP, contPort)).Run()
+	exec.Command("sudo", "/usr/sbin/iptables", "-t", "nat", "-I", "POSTROUTING", "-p", "tcp", "--dst", contIP, "--dport", contPort, "-j", "MASQUERADE").Run()
 
 	return nil
 }

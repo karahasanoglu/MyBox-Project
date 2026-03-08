@@ -60,10 +60,12 @@ func main() {
 // Bu sayede 'mybox run' ve 'mybox stop' sudo gerektirmeksizin kullanılabilir.
 func requireRoot() {
 	if syscall.Geteuid() == 0 {
-		return // Zaten root (Direct or SetUID)
+		return // Zaten root
 	}
+
+	absPath, _ := filepath.Abs(os.Args[0])
 	fmt.Println("[*] Root yetkisi gerekiyor, sudo ile yeniden başlatılıyor...")
-	cmd := exec.Command("sudo", append([]string{os.Args[0]}, os.Args[1:]...)...)
+	cmd := exec.Command("sudo", append([]string{absPath}, os.Args[1:]...)...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

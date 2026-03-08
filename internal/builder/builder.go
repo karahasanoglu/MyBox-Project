@@ -70,7 +70,7 @@ func extractTar(tarFile, targetDir string) error {
 func saveAsImage(sourceDir, imagePath string) error {
 	fmt.Printf("Imaj paketleniyor: %s\n", imagePath)
 	// --no-same-owner: çıkarırken root sahipliği zorunlu kılmaz
-	cmd := exec.Command("/usr/bin/tar", "-cf", imagePath,
+	cmd := exec.Command("sudo", "/usr/bin/tar", "-cf", imagePath,
 		"--no-same-owner",
 		"-C", sourceDir, ".")
 	return cmd.Run()
@@ -162,7 +162,7 @@ func BuildImage(buildContext, imagePath string) {
 			os.MkdirAll(filepath.Dir(dnsPath), 0755)
 			exec.Command("/usr/bin/cp", "/etc/resolv.conf", dnsPath).Run()
 
-			cmd := exec.Command("/usr/sbin/chroot", workDir, "/bin/sh", "-c", "cd "+currentWorkingDir+" && "+argument)
+			cmd := exec.Command("sudo", "/usr/sbin/chroot", workDir, "/bin/sh", "-c", "cd "+currentWorkingDir+" && "+argument)
 			if logFile != nil {
 				cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
 				cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
