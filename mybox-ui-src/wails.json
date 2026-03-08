@@ -1,0 +1,19 @@
+{
+  "name": "mybox-ui",
+  "outputfilename": "mybox-ui",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "",
+  "author": {
+    "name": "MyBox Developer",
+    "email": ""
+  },
+  "info": {
+    "companyName": "MyBox",
+    "productName": "MyBox Manager",
+    "productVersion": "1.0.0",
+    "copyright": "",
+    "comments": ""
+  }
+}

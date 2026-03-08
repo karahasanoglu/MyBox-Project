@@ -94,6 +94,7 @@ func handleInstall() {
 
 // --- KOMUTLAR ---
 func handleBuild(args []string) {
+	requireRoot()
 	tag := "latest"
 	context := "."
 	for i, arg := range args {

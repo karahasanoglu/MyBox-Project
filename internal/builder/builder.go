@@ -19,7 +19,7 @@ func pullAndExtractImage(imageName, targetDir string) error {
 	defer os.RemoveAll(tempDir)
 
 	// Bu komut manifest ve layer'ları parçalanmış halde getirir
-	cmd := exec.Command("skopeo", "copy", "docker://"+imageName, "dir:"+tempDir)
+	cmd := exec.Command("/usr/bin/skopeo", "copy", "docker://"+imageName, "dir:"+tempDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -34,7 +34,7 @@ func pullAndExtractImage(imageName, targetDir string) error {
 			fmt.Printf("   > Katman açılıyor: %s\n", file.Name()[:12])
 			layerPath := filepath.Join(tempDir, file.Name())
 
-			exec.Command("tar", "-xf", layerPath, "-C", targetDir).Run()
+			exec.Command("/usr/bin/tar", "-xf", layerPath, "-C", targetDir).Run()
 		}
 	}
 	return nil
@@ -63,14 +63,14 @@ func downloadImage(url, dest string) error {
 }
 
 func extractTar(tarFile, targetDir string) error {
-	cmd := exec.Command("tar", "-xf", tarFile, "-C", targetDir)
+	cmd := exec.Command("/usr/bin/tar", "-xf", tarFile, "-C", targetDir)
 	return cmd.Run()
 }
 
 func saveAsImage(sourceDir, imagePath string) error {
 	fmt.Printf("Imaj paketleniyor: %s\n", imagePath)
 	// --no-same-owner: çıkarırken root sahipliği zorunlu kılmaz
-	cmd := exec.Command("tar", "-cf", imagePath,
+	cmd := exec.Command("/usr/bin/tar", "-cf", imagePath,
 		"--no-same-owner",
 		"-C", sourceDir, ".")
 	return cmd.Run()
@@ -109,6 +109,13 @@ func BuildImage(buildContext, imagePath string) {
 	defer file.Close()
 
 	fmt.Println("---- MyBox Build Başladı ----")
+
+	// Create log file for build
+	logFile, _ := os.OpenFile("/tmp/mybox-build.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+	if logFile != nil {
+		defer logFile.Close()
+		fmt.Fprintf(logFile, "Build context: %s, dest: %s\n", buildContext, imagePath)
+	}
 
 	currentWorkingDir := "/"
 
@@ -153,12 +160,20 @@ func BuildImage(buildContext, imagePath string) {
 			// İnternet erişimi için DNS ayarlarını kopyala
 			dnsPath := filepath.Join(workDir, "etc/resolv.conf")
 			os.MkdirAll(filepath.Dir(dnsPath), 0755)
-			exec.Command("cp", "/etc/resolv.conf", dnsPath).Run()
+			exec.Command("/usr/bin/cp", "/etc/resolv.conf", dnsPath).Run()
 
-			cmd := exec.Command("chroot", workDir, "/bin/sh", "-c", "cd "+currentWorkingDir+" && "+argument)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
+			cmd := exec.Command("/usr/sbin/chroot", workDir, "/bin/sh", "-c", "cd "+currentWorkingDir+" && "+argument)
+			if logFile != nil {
+				cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
+				cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
+			} else {
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+			}
 			if err := cmd.Run(); err != nil {
+				if logFile != nil {
+					fmt.Fprintf(logFile, "[!] HATA: RUN komutu başarısız oldu: %v\n", err)
+				}
 				fmt.Printf("[!] HATA: RUN komutu başarısız oldu: %v\n", err)
 				fmt.Printf("[!] Komut: %s\n", argument)
 				fmt.Println("[!] Build iptal ediliyor.")
@@ -192,7 +207,7 @@ func BuildImage(buildContext, imagePath string) {
 				// Dizin kopyalama: mybox_rootfs ve .tar dosyalarını hariç tut
 				os.MkdirAll(finalDstInRootfs, 0755)
 				// rsync varsa kullan, yoksa find+cp kullan
-				rsyncCmd := exec.Command("rsync", "-a",
+				rsyncCmd := exec.Command("/usr/bin/rsync", "-a",
 					"--exclude=mybox_rootfs",
 					"--exclude=*.tar",
 					"--exclude=.git",
@@ -209,7 +224,7 @@ func BuildImage(buildContext, imagePath string) {
 							continue
 						}
 						src := filepath.Join(srcPath, entry.Name())
-						cpCmd := exec.Command("cp", "-r", src, finalDstInRootfs)
+						cpCmd := exec.Command("/usr/bin/cp", "-r", src, finalDstInRootfs)
 						if err := cpCmd.Run(); err != nil {
 							fmt.Printf("   Uyarı: %s kopyalanamadı: %v\n", entry.Name(), err)
 						}
@@ -225,7 +240,7 @@ func BuildImage(buildContext, imagePath string) {
 				fmt.Printf("Kopyalama hatası: %v\n", copyErr)
 			} else {
 				// Kopyalanan dosyaların erişilebilir/çalıştırılabilir olmasını garantile
-				exec.Command("chmod", "-R", "755", finalDstInRootfs).Run()
+				exec.Command("/usr/bin/chmod", "-R", "755", finalDstInRootfs).Run()
 			}
 
 		case "CMD":

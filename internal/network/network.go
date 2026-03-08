@@ -10,7 +10,7 @@ import (
 // SetupBridge köprü arayüzü yoksa oluşturur ve bir IP adresi atar.
 func SetupBridge(bridgeName, bridgeIP string) error {
 	// Köprünün var olup olmadığını kontrol et
-	if err := exec.Command("ip", "link", "show", bridgeName).Run(); err == nil {
+	if err := exec.Command("/usr/sbin/ip", "link", "show", bridgeName).Run(); err == nil {
 		fmt.Printf("[*] Köprü %s zaten mevcut\n", bridgeName)
 		return nil
 	}
@@ -18,17 +18,17 @@ func SetupBridge(bridgeName, bridgeIP string) error {
 	fmt.Printf("[*] %s köprüsü %s IP adresi ile oluşturuluyor\n", bridgeName, bridgeIP)
 
 	// ip link add name mybox0 type bridge
-	if err := exec.Command("ip", "link", "add", "name", bridgeName, "type", "bridge").Run(); err != nil {
+	if err := exec.Command("/usr/sbin/ip", "link", "add", "name", bridgeName, "type", "bridge").Run(); err != nil {
 		return fmt.Errorf("köprü oluşturulamadı: %v", err)
 	}
 
 	// ip addr add 10.0.0.1/24 dev mybox0
-	if err := exec.Command("ip", "addr", "add", bridgeIP, "dev", bridgeName).Run(); err != nil {
+	if err := exec.Command("/usr/sbin/ip", "addr", "add", bridgeIP, "dev", bridgeName).Run(); err != nil {
 		return fmt.Errorf("köprüye IP atanamadı: %v", err)
 	}
 
 	// ip link set dev mybox0 up
-	if err := exec.Command("ip", "link", "set", "dev", bridgeName, "up").Run(); err != nil {
+	if err := exec.Command("/usr/sbin/ip", "link", "set", "dev", bridgeName, "up").Run(); err != nil {
 		return fmt.Errorf("köprü aktifleştirilemedi: %v", err)
 	}
 
@@ -38,11 +38,11 @@ func SetupBridge(bridgeName, bridgeIP string) error {
 // CreateVethPair bir veth çifti (sanal kablo) oluşturur.
 func CreateVethPair(hostVeth, contVeth string) error {
 	// Temizlik: Eğer eski arayüzler kaldıysa önce onları sil
-	exec.Command("ip", "link", "delete", hostVeth).Run()
+	exec.Command("/usr/sbin/ip", "link", "delete", hostVeth).Run()
 
 	fmt.Printf("[*] Veth çifti oluşturuluyor: %s <-> %s\n", hostVeth, contVeth)
 	// ip link add veth-h type veth peer name veth-c
-	if err := exec.Command("ip", "link", "add", hostVeth, "type", "veth", "peer", "name", contVeth).Run(); err != nil {
+	if err := exec.Command("/usr/sbin/ip", "link", "add", hostVeth, "type", "veth", "peer", "name", contVeth).Run(); err != nil {
 		return fmt.Errorf("veth çifti oluşturulamadı: %v", err)
 	}
 	return nil
@@ -52,11 +52,11 @@ func CreateVethPair(hostVeth, contVeth string) error {
 func AttachVethToBridge(hostVeth, bridgeName string) error {
 	fmt.Printf("[*] %s köprüye (%s) bağlanıyor\n", hostVeth, bridgeName)
 	// ip link set veth-h master mybox0
-	if err := exec.Command("ip", "link", "set", hostVeth, "master", bridgeName).Run(); err != nil {
+	if err := exec.Command("/usr/sbin/ip", "link", "set", hostVeth, "master", bridgeName).Run(); err != nil {
 		return fmt.Errorf("veth köprüye bağlanamadı: %v", err)
 	}
 	// ip link set veth-h up
-	if err := exec.Command("ip", "link", "set", hostVeth, "up").Run(); err != nil {
+	if err := exec.Command("/usr/sbin/ip", "link", "set", hostVeth, "up").Run(); err != nil {
 		return fmt.Errorf("host veth ucu aktifleştirilemedi: %v", err)
 	}
 	return nil
@@ -66,7 +66,7 @@ func AttachVethToBridge(hostVeth, bridgeName string) error {
 func MoveVethToNamespace(contVeth string, pid int) error {
 	fmt.Printf("[*] %s, PID %d'nin ağ alanına taşınıyor\n", contVeth, pid)
 	// ip link set veth-c netns <pid>
-	if err := exec.Command("ip", "link", "set", contVeth, "netns", fmt.Sprintf("%d", pid)).Run(); err != nil {
+	if err := exec.Command("/usr/sbin/ip", "link", "set", contVeth, "netns", fmt.Sprintf("%d", pid)).Run(); err != nil {
 		return fmt.Errorf("veth alana taşınamadı: %v", err)
 	}
 	return nil
@@ -101,10 +101,10 @@ func SetupContainerNetwork(contVeth, contIP, gateway string) error {
 	// Gateway farklı subnet'te olabilir (10.0.0.1 vs 10.0.91.0/24 gibi).
 	// Önce 'scope link' route ile gateway'i direkt erişilebilir yap,
 	// ardından default route ekle.
-	exec.Command("ip", "route", "add", gateway, "dev", "eth0", "scope", "link").Run()
+	exec.Command("/usr/sbin/ip", "route", "add", gateway, "dev", "eth0", "scope", "link").Run()
 
 	// ip route add default via 10.0.0.1
-	if err := exec.Command("ip", "route", "add", "default", "via", gateway).Run(); err != nil {
+	if err := exec.Command("/usr/sbin/ip", "route", "add", "default", "via", gateway).Run(); err != nil {
 		return fmt.Errorf("varsayılan rota eklenemedi: %v", err)
 	}
 
@@ -121,17 +121,17 @@ func SetupNAT(bridgeName string) error {
 	}
 
 	// POSTROUTING: Konteynerden çıkan paketler için NAT
-	cmd := exec.Command("iptables", "-t", "nat", "-C", "POSTROUTING", "-s", "10.0.0.0/8", "!", "-o", bridgeName, "-j", "MASQUERADE")
+	cmd := exec.Command("/usr/sbin/iptables", "-t", "nat", "-C", "POSTROUTING", "-s", "10.0.0.0/8", "!", "-o", bridgeName, "-j", "MASQUERADE")
 	if err := cmd.Run(); err != nil {
-		exec.Command("iptables", "-t", "nat", "-A", "POSTROUTING", "-s", "10.0.0.0/8", "!", "-o", bridgeName, "-j", "MASQUERADE").Run()
+		exec.Command("/usr/sbin/iptables", "-t", "nat", "-A", "POSTROUTING", "-s", "10.0.0.0/8", "!", "-o", bridgeName, "-j", "MASQUERADE").Run()
 	}
 
 	// FORWARD: Bridge üzerinden geçen paketlere izin ver (Cerrahi Check)
-	if exec.Command("iptables", "-C", "FORWARD", "-i", bridgeName, "-j", "ACCEPT").Run() != nil {
-		exec.Command("iptables", "-A", "FORWARD", "-i", bridgeName, "-j", "ACCEPT").Run()
+	if exec.Command("/usr/sbin/iptables", "-C", "FORWARD", "-i", bridgeName, "-j", "ACCEPT").Run() != nil {
+		exec.Command("/usr/sbin/iptables", "-A", "FORWARD", "-i", bridgeName, "-j", "ACCEPT").Run()
 	}
-	if exec.Command("iptables", "-C", "FORWARD", "-o", bridgeName, "-j", "ACCEPT").Run() != nil {
-		exec.Command("iptables", "-A", "FORWARD", "-o", bridgeName, "-j", "ACCEPT").Run()
+	if exec.Command("/usr/sbin/iptables", "-C", "FORWARD", "-o", bridgeName, "-j", "ACCEPT").Run() != nil {
+		exec.Command("/usr/sbin/iptables", "-A", "FORWARD", "-o", bridgeName, "-j", "ACCEPT").Run()
 	}
 
 	return nil
@@ -148,15 +148,15 @@ func SetupPortForwarding(hostPort, contIP, contPort string) error {
 	purgePortRules(hostPort)
 
 	// 1. PREROUTING: Dışarıdan gelen trafik için
-	exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
+	exec.Command("/usr/sbin/iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
 
 	// 2. OUTPUT: Host makinenin kendinden gelen trafik için
-	exec.Command("iptables", "-t", "nat", "-I", "OUTPUT", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
+	exec.Command("/usr/sbin/iptables", "-t", "nat", "-I", "OUTPUT", "-p", "tcp", "--dport", hostPort, "-j", "DNAT", "--to-destination", contIP+":"+contPort).Run()
 
 	// 3. POSTROUTING: Yanıtın doğru dönmesi için paket maskeleme (ContPort'a Duyarlı)
 	// Önce temizle ki mükerrer kural olmasın
-	exec.Command("sh", "-c", fmt.Sprintf("iptables -t nat -S POSTROUTING | grep \"--dst %s/32\" | grep \"dport %s \" | sed 's/-A/-D/' | xargs -L 1 iptables -t nat 2>/dev/null", contIP, contPort)).Run()
-	exec.Command("iptables", "-t", "nat", "-I", "POSTROUTING", "-p", "tcp", "--dst", contIP, "--dport", contPort, "-j", "MASQUERADE").Run()
+	exec.Command("sh", "-c", fmt.Sprintf("/usr/sbin/iptables -t nat -S POSTROUTING | grep \"--dst %s/32\" | grep \"dport %s \" | sed 's/-A/-D/' | xargs -L 1 /usr/sbin/iptables -t nat 2>/dev/null", contIP, contPort)).Run()
+	exec.Command("/usr/sbin/iptables", "-t", "nat", "-I", "POSTROUTING", "-p", "tcp", "--dst", contIP, "--dport", contPort, "-j", "MASQUERADE").Run()
 
 	return nil
 }
