@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mybox/internal/network"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -27,7 +30,6 @@ type RunContainerReq struct {
 	Memory  string   `json:"memory"` // Yeni
 	CPUs    string   `json:"cpus"`   // Yeni
 }
-
 
 type UpdateResourceReq struct {
 	Memory string `json:"memory"`
@@ -153,4 +155,23 @@ func (a *App) RemoveImage(name string) (interface{}, error) {
 // UpdateContainerResources, çalışan bir konteynerin limitlerini günceller
 func (a *App) UpdateContainerResources(id string, req UpdateResourceReq) (interface{}, error) {
 	return a.requestHelper(http.MethodPatch, fmt.Sprintf("/containers/%s/resources", id), req)
+}
+
+// OpenURL, sistem tarayıcısında belirtilen URL'yi açar
+func (a *App) OpenURL(url string) {
+	if a.ctx != nil {
+		runtime.BrowserOpenURL(a.ctx, url)
+	}
+}
+
+// GetHostIP, makinenin yerel ağdaki IP adresini döner
+func (a *App) GetHostIP() string {
+	return network.GetLocalIP()
+}
+
+// CheckMyBoxFile, belirtilen dizinde MyBoxFile olup olmadığını kontrol eder
+func (a *App) CheckMyBoxFile(path string) bool {
+	myboxFilePath := filepath.Join(path, "MyBoxFile")
+	info, err := os.Stat(myboxFilePath)
+	return err == nil && !info.IsDir()
 }

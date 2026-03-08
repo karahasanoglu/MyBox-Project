@@ -77,8 +77,17 @@ func saveAsImage(sourceDir, imagePath string) error {
 }
 
 func BuildImage(buildContext, imagePath string) {
-	buildContext = filepath.Clean(buildContext) // Windows uyumluluğu için
 	myBoxFilePath := filepath.Join(buildContext, "MyBoxFile")
+
+	fmt.Printf("[*] Build İşlemi Başladı\n")
+	fmt.Printf("[*] Context: %s\n", buildContext)
+	fmt.Printf("[*] MyBoxFile: %s\n", myBoxFilePath)
+
+	// MyBoxFile kontrolü
+	if _, err := os.Stat(myBoxFilePath); os.IsNotExist(err) {
+		fmt.Printf("[!] HATA: %s bulunamadı. Lütfen seçili klasörde bir 'MyBoxFile' olduğundan emin olun.\n", myBoxFilePath)
+		return
+	}
 
 	workDir, err := os.MkdirTemp("", "mybox_builder_rootfs_*")
 	if err != nil {

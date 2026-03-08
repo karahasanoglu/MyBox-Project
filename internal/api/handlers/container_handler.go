@@ -8,13 +8,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
-	"mybox/internal/runtime"
 	"mybox/internal/cgroup"
-	
+	"mybox/internal/runtime"
 
 	"github.com/gin-gonic/gin"
 )
@@ -160,23 +159,30 @@ func StopContainerHandler(c *gin.Context) {
 		return
 	}
 
-	// 1. İşleme temiz kapanma sinyali (SIGTERM) gönder
-	err := exec.Command("kill", "-15", containerID).Run()
-	if err != nil {
-		exec.Command("sudo", "kill", "-15", containerID).Run()
+	stateFile := filepath.Join(ContainerDir, containerID+".json")
+	data, err := os.ReadFile(stateFile)
+	var state runtime.ContainerState
+	if err == nil {
+		json.Unmarshal(data, &state)
 	}
+
+	// 1. İşleme temiz kapanma sinyali (SIGTERM) gönder
+	_ = exec.Command("sudo", "kill", "-15", containerID).Run()
 
 	// 2. Kapanması için 'grace period' bekle
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	// 3. Hala yaşıyor mu kontrol et (kill -0)
-	if err := exec.Command("kill", "-0", containerID).Run(); err == nil {
-		log.Printf("[Warning] Konteyner %s graceful kapanmadı, SIGKILL gönderiliyor", containerID)
-		exec.Command("kill", "-9", containerID).Run()
-		exec.Command("sudo", "kill", "-9", containerID).Run()
+	if err := exec.Command("sudo", "kill", "-0", containerID).Run(); err == nil {
+		_ = exec.Command("sudo", "kill", "-9", containerID).Run()
 	}
 
-	_ = os.Remove(filepath.Join(ContainerDir, containerID+".json"))
+	// 4. Port Yönlendirmeyi Kaldır (Iptables temizliği) via CLI
+	if state.HostPort != "" {
+		_ = exec.Command("sudo", "mybox", "stop", containerID).Run()
+	}
+
+	_ = os.Remove(stateFile)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Container stopped and removed successfully",

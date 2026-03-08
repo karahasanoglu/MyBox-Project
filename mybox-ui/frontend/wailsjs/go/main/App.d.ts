@@ -4,13 +4,19 @@ import {main} from '../models';
 
 export function BuildImage(arg1:main.BuildImageReq):Promise<any>;
 
+export function CheckMyBoxFile(arg1:string):Promise<boolean>;
+
 export function DeleteContainer(arg1:string):Promise<any>;
+
+export function GetHostIP():Promise<string>;
 
 export function GetSystemStats():Promise<any>;
 
 export function ListContainers():Promise<any>;
 
 export function ListImages():Promise<any>;
+
+export function OpenURL(arg1:string):Promise<void>;
 
 export function RemoveImage(arg1:string):Promise<any>;
 

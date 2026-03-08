@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Install MyBox - Container Runtime</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <img src="icons/logo.png" alt="MyBox Logo" class="logo-img">
+                <span class="logo-text">MyBox</span>
+            </a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="install.html" class="active">Installation</a>
+                <a href="https://github.com/karahasanoglu/MyBox-Project" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="page-content">
+        <section class="install-hero text-center pt-section">
+            <h1 class="section-title">Get Started with <span class="text-gradient">MyBox CLI</span></h1>
+            <p class="section-desc">Run the following command in your terminal to install MyBox CLI and its
+                dependencies.</p>
+
+            <div class="container max-w-2xl">
+                <div class="terminal-box">
+                    <div class="terminal-header">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                    </div>
+                    <div class="terminal-body" onclick="copyInstallCommand()" style="cursor: pointer;">
+                        <code
+                            id="install-cmd">curl -sSL https://raw.githubusercontent.com/karahasanoglu/MyBox-Project/version-1.0.7/install.sh | sudo bash</code>
+                    </div>
+                </div>
+                <p class="mt-4" style="color: #666; font-size: 0.9rem;">Click the command to copy.</p>
+            </div>
+        </section>
+
+        <section class="desktop-download text-center pt-section section-alt">
+            <div class="container">
+                <h2 class="section-title">MyBox <span class="text-gradient">Desktop Manager</span></h2>
+                <p class="section-desc">Prefer a graphical interface? Manage your containers with a modern desktop
+                    application.</p>
+
+                <div class="mt-4"
+                    style="padding: 4rem; border-radius: 20px; background: var(--bg-sub); border: 1px solid var(--border-color);">
+                    <img src="icons/logo.png" alt="Desktop App" style="width: 100px; margin-bottom: 2rem;">
+                    <h3>MyBox Desktop v1.0.7</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">Available for Linux (AMD64)</p>
+                    <a href="https://github.com/karahasanoglu/MyBox-Project/releases/download/version-1.0.7/mybox-ui"
+                        class="btn btn-success btn-lg">Download Desktop App</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="requirements-section pt-section">
+            <div class="container text-center">
+                <h2>System Requirements</h2>
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; flex-wrap: wrap;">
+                    <span
+                        style="padding: 0.5rem 1.5rem; background: var(--bg-accent); border-radius: 99px; border: 1px solid var(--border-color);">Linux
+                        (Ubuntu/Debian)</span>
+                    <span
+                        style="padding: 0.5rem 1.5rem; background: var(--bg-accent); border-radius: 99px; border: 1px solid var(--border-color);">Go
+                        1.18+</span>
+                    <span
+                        style="padding: 0.5rem 1.5rem; background: var(--bg-accent); border-radius: 99px; border: 1px solid var(--border-color); color: #ef4444;">Sudo
+                        Privileges</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-content text-center" style="display: block;">
+            <p>&copy; 2026 MyBox Contributors. Version 1.0.7.</p>
+        </div>
+    </footer>
+
+    <script>
+        function copyInstallCommand() {
+            const cmd = document.getElementById('install-cmd').innerText;
+            navigator.clipboard.writeText(cmd);
+            alert('Command copied to clipboard!');
+        }
+    </script>
+</body>
+
+</html>

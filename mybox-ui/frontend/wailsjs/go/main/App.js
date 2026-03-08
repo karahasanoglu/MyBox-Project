@@ -6,8 +6,16 @@ export function BuildImage(arg1) {
   return window['go']['main']['App']['BuildImage'](arg1);
 }
 
+export function CheckMyBoxFile(arg1) {
+  return window['go']['main']['App']['CheckMyBoxFile'](arg1);
+}
+
 export function DeleteContainer(arg1) {
   return window['go']['main']['App']['DeleteContainer'](arg1);
+}
+
+export function GetHostIP() {
+  return window['go']['main']['App']['GetHostIP']();
 }
 
 export function GetSystemStats() {
@@ -20,6 +28,10 @@ export function ListContainers() {
 
 export function ListImages() {
   return window['go']['main']['App']['ListImages']();
+}
+
+export function OpenURL(arg1) {
+  return window['go']['main']['App']['OpenURL'](arg1);
 }
 
 export function RemoveImage(arg1) {

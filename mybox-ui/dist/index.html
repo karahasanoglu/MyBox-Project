@@ -1,86 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MyBox Manager</title>
     <link rel="stylesheet" href="./style.css">
 </head>
+
 <body>
-    <div class="container">
-        <h2>MyBox Kontrol Paneli</h2>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="./icons/logo.png" alt="MyBox Logo" class="app-logo">
+                <h2>MyBox</h2>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" data-target="containers-tab">Containers</button>
+                <button class="tab-btn" data-target="images-tab">Images</button>
+                <button class="tab-btn" data-target="logs-tab">System Logs</button>
+            </div>
+        </aside>
 
-        <div class="tabs">
-            <button class="tab-btn active" data-target="containers-tab">Konteynerler</button>
-            <button class="tab-btn" data-target="images-tab">İmajlar</button>
-            <button class="tab-btn" data-target="logs-tab">Sistem Logları</button>
+        <!-- Main Content Area -->
+        <main class="content-area">
+            <div id="containers-tab" class="tab-content active">
+                <div class="actions">
+                    <button id="btn-refresh-containers">Refresh</button>
+                    <button id="btn-run-modal-open" class="btn-success">Start Container</button>
+                </div>
+
+                <div class="table-container">
+                    <table id="containers-table">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Image</th>
+                                <th>IP</th>
+                                <th>Ports</th>
+                                <th>Resources (M/C)</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="images-tab" class="tab-content">
+                <div class="actions">
+                    <button id="btn-refresh-images">Refresh</button>
+                </div>
+
+                <div class="actions input-group">
+                    <input type="text" id="build-tag-input" placeholder="Image Name (e.g., myapp)">
+                    <input type="text" id="build-dir-input" placeholder="Source Path">
+                    <button id="btn-select-dir">Browse</button>
+                    <button id="btn-build" class="btn-primary">Build</button>
+                </div>
+
+                <div class="table-container">
+                    <table id="images-table">
+                        <thead>
+                            <tr>
+                                <th>Image Name</th>
+                                <th>Size</th>
+                                <th>Created At</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="logs-tab" class="tab-content">
+                <div class="actions">
+                    <button id="btn-clear-logs" class="btn-danger">Clear Logs</button>
+                </div>
+                <div class="log-panel" id="log-container"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="run-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Start New Container</h3>
+                <button id="btn-run-modal-close" class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Select Image</label>
+                    <select id="run-image-select"></select>
+                </div>
+                <div class="form-group">
+                    <label>Port Mapping (Host:Container)</label>
+                    <input type="text" id="run-port-input" placeholder="e.g. 8080:80">
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Memory Limit</label>
+                        <input type="text" id="run-mem-input" placeholder="e.g. 512m or 1g">
+                    </div>
+                    <div class="form-group">
+                        <label>CPU Limit</label>
+                        <input type="text" id="run-cpu-input" placeholder="e.g. 0.5 or 2">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-run-submit" class="btn-primary w-full">Launch Container</button>
+            </div>
         </div>
+    </div>
 
-        <div id="containers-tab" class="tab-content active">
-            <div class="actions">
-                <button id="btn-refresh-containers">Yenile</button>
-                <button id="btn-run-modal" class="btn-success">Konteyner Başlat</button>
-            </div>
-
-            <div class="actions input-group" id="run-container-group" style="display: none; flex-wrap: wrap;">
-                <input type="text" id="run-image-input" placeholder="İmaj (örn: alpine)">
-                <input type="text" id="run-port-input" placeholder="Port (8080:80)">
-                <input type="text" id="run-mem-input" placeholder="RAM (512m)">
-                <input type="text" id="run-cpu-input" placeholder="CPU (0.5)">
-                <button id="btn-run-submit" class="btn-primary">Başlat</button>
-            </div>
-
-            <table id="containers-table">
-                <thead>
-                    <tr>
-                        <th>PID</th>
-                        <th>İmaj</th>
-                        <th>IP</th>
-                        <th>Portlar</th>
-                        <th>Kaynaklar (M/C)</th>
-                        <th>Durum</th>
-                        <th>İşlem</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-
-        <div id="images-tab" class="tab-content">
-            <div class="actions">
-                <button id="btn-refresh-images">Yenile</button>
-            </div>
-
-            <div class="actions input-group">
-                <input type="text" id="build-tag-input" placeholder="İmaj Adı (örn: myapp)">
-                <input type="text" id="build-dir-input" placeholder="Klasör Yolu">
-                <button id="btn-select-dir">Gözat</button>
-                <button id="btn-build" class="btn-primary">Build Et</button>
-            </div>
-
-            <div class="table-container">
-                <table id="images-table">
-                    <thead>
-                        <tr>
-                            <th>İmaj Adı</th>
-                            <th>Boyut</th>
-                            <th>Oluşturulma</th>
-                            <th>İşlem</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="logs-tab" class="tab-content">
-            <div class="actions">
-                <button id="btn-clear-logs" class="btn-danger">Logları Temizle</button>
-            </div>
-            <div class="log-panel" id="log-container"></div>
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <p>Building Image...</p>
+            <span class="loader-subtext">This process may take a while depending on image layers.</span>
         </div>
     </div>
 
     <script src="./main.js" type="module"></script>
 </body>
+
 </html>

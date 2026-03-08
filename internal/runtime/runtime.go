@@ -317,24 +317,31 @@ func ListContainers() {
 func RemoveContainer(pidStr string) {
 	fmt.Printf("[*] Konteyner durduruluyor: PID=%s\n", pidStr)
 
-	// 1. Önce normal kill dene
-	killErr := exec.Command("kill", "-9", pidStr).Run()
-	if killErr != nil {
-		// Normal kill başarısız (muhtemelen root process) → sudo ile dene
-		fmt.Printf("   [*] Sudo ile durduruluyor...\n")
-		killErr = exec.Command("sudo", "kill", "-9", pidStr).Run()
+	// State bilgisini oku ki portları temizleyebilelim
+	data, err := os.ReadFile(filepath.Join(stateDir, pidStr+".json"))
+	var state ContainerState
+	if err == nil {
+		json.Unmarshal(data, &state)
 	}
 
-	// 2. State dosyasını her durumda sil
+	// 1. Önce normal kill dene
+	killErr := exec.Command("sudo", "kill", "-9", pidStr).Run()
+
+	// 2. Port Yönlendirmeyi Temizle
+	if state.HostPort != "" {
+		network.RemovePortForwarding(state.HostPort, state.IP, state.ContPort)
+	}
+
+	// 3. State dosyasını her durumda sil
 	pid, parseErr := strconv.Atoi(pidStr)
 	if parseErr == nil {
 		removeState(pid)
 	}
 
-	// 3. Sonuç raporu
+	// 4. Sonuç raporu
 	if killErr != nil {
 		fmt.Printf("[-] Konteyner durdurulamadı (PID=%s): %v\n", pidStr, killErr)
-		fmt.Println("    İpcu: 'sudo mybox stop <PID>' deneyin.")
+		fmt.Println("    İpucu: 'sudo mybox stop <PID>' deneyin.")
 	} else {
 		fmt.Println("[+] Konteyner başarıyla durduruldu.")
 	}
