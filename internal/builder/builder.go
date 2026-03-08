@@ -79,9 +79,14 @@ func saveAsImage(sourceDir, imagePath string) error {
 func BuildImage(buildContext, imagePath string) {
 	buildContext = filepath.Clean(buildContext) // Windows uyumluluğu için
 	myBoxFilePath := filepath.Join(buildContext, "MyBoxFile")
-	workDir := filepath.Join(buildContext, "mybox_rootfs")
 
-	
+	workDir, err := os.MkdirTemp("", "mybox_builder_rootfs_*")
+	if err != nil {
+		fmt.Printf("Temp dizin oluşturulamadı: %v\n", err)
+		return
+	}
+	defer os.RemoveAll(workDir)
+
 	// MERKEZİ DEPO AYARI
 	homedir, _ := os.UserHomeDir()
 	imageStore := filepath.Join(homedir, ".mybox", "images")
@@ -144,7 +149,12 @@ func BuildImage(buildContext, imagePath string) {
 			cmd := exec.Command("sudo", "chroot", workDir, "/bin/sh", "-c", "cd "+currentWorkingDir+" && "+argument)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
-			cmd.Run()
+			if err := cmd.Run(); err != nil {
+				fmt.Printf("[!] HATA: RUN komutu başarısız oldu: %v\n", err)
+				fmt.Printf("[!] Komut: %s\n", argument)
+				fmt.Println("[!] Build iptal ediliyor.")
+				return
+			}
 
 		case "COPY":
 			fmt.Printf("[3] Dosya kopyalanıyor: %s\n", argument)
@@ -216,6 +226,8 @@ func BuildImage(buildContext, imagePath string) {
 
 		case "EXPOSE":
 			fmt.Printf("[*] Port bilgilendirmesi: %s\n", argument)
+			// Runtime'ın portu bilmesi için kaydet
+			os.WriteFile(filepath.Join(workDir, ".mybox_expose"), []byte(argument), 0644)
 		}
 	}
 

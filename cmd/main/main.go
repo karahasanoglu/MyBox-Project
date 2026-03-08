@@ -17,7 +17,7 @@ import (
 const (
 	ImageDir     = "/var/lib/mybox/images"
 	ContainerDir = "/var/lib/mybox/containers"
-	Version      = "1.0.4"
+	Version      = "1.0.6"
 )
 
 func main() {
@@ -204,6 +204,7 @@ func printHelp() {
 	fmt.Println("  ps               : Çalışanları listeler")
 	fmt.Println("  stop [PID]       : Konteyneri durdurur")
 	fmt.Println("  images           : İmajları listeler")
+	fmt.Println("  serve            : API sunucusunu başlatır")
 	fmt.Println("  rmi [isim...]    : İmaj(lar)ı siler")
 	fmt.Println("  --version        : Sürümü gösterir")
 }

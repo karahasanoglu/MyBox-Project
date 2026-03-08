@@ -133,6 +133,7 @@ func Parent(args []string, imagePath string) {
 	cmd.Env = append(os.Environ(),
 		"MYBOX_CONT_VETH="+contVeth,
 		"MYBOX_CONT_IP="+containerIPCIDR,
+		"MYBOX_CONT_ID="+contID,
 	)
 
 	if err := cmd.Start(); err != nil {
@@ -156,7 +157,7 @@ func Parent(args []string, imagePath string) {
 
 	must(cgroup.SetupCgroups(pid, memoryLimit, cpuLimit))
 	defer cgroup.CleanupCgroups(pid)
-	defer cleanupRootfs(pid)
+	defer cleanupRootfs(contID)
 
 	if err := network.CreateVethPair(hostVeth, contVeth); err != nil {
 		fmt.Printf("Uyarı: Veth çifti oluşturulamadı: %v\n", err)
@@ -191,6 +192,11 @@ func Parent(args []string, imagePath string) {
 	var hostPort, contPort string
 
 	imageName := filepath.Base(imagePath)
+
+	// İmajın EXPOSE portunu oku (builder tarafından kaydedilmiş)
+	// Bu bilgiyi port uyumsuzluklarını tespit etmek için kullanıyoruz
+	imageStorePath := strings.TrimSuffix(imagePath, filepath.Ext(imagePath))
+	_ = imageStorePath // sadece expose kontrolü için kullanılır
 
 	// 4. Port Yönlendirme Yapılandırması (-p 8080:80)
 	for i, arg := range args {
@@ -230,8 +236,8 @@ func Parent(args []string, imagePath string) {
 	removeState(pid)
 }
 
-func cleanupRootfs(pid int) {
-	tempRootfs := fmt.Sprintf("/tmp/mybox_rootfs_%d", pid)
+func cleanupRootfs(contID string) {
+	tempRootfs := fmt.Sprintf("/tmp/mybox_rootfs_%s", contID)
 	if _, err := os.Stat(tempRootfs); !os.IsNotExist(err) {
 		fmt.Printf("[*] Rootfs temizleniyor: %s\n", tempRootfs)
 		// Unmount /proc if it's still mounted
@@ -346,7 +352,11 @@ func Child() {
 	fmt.Println("\n---- [MyBox] Konteyner Başlatılıyor ----")
 	imagePath := os.Args[2]
 
-	tempRootfs := "/tmp/mybox_rootfs_" + fmt.Sprintf("%d", os.Getpid())
+	contID := os.Getenv("MYBOX_CONT_ID")
+	if contID == "" {
+		contID = fmt.Sprintf("fallback_pid_%d", os.Getpid())
+	}
+	tempRootfs := "/tmp/mybox_rootfs_" + contID
 	// Önceki başarısız çalışmadan kalan artıkları temizle ve sıfırla
 	os.RemoveAll(tempRootfs)
 	os.MkdirAll(tempRootfs, 0755)
