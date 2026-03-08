@@ -46,9 +46,10 @@ func main() {
 		handleRMI(args)
 	case "child":
 		runtime.Child()
-	case "-version", "--version", "version":
+	case "--version", "-version", "version":
 		fmt.Printf("MyBox Version: %s\n", Version)
 	case "serve":
+		requireRoot()
 		router.StartAPI()
 	default:
 		printHelp()
@@ -58,8 +59,8 @@ func main() {
 // requireRoot: eğer kullanıcı root değilse komutu sudo ile yeniden çalıştırır.
 // Bu sayede 'mybox run' ve 'mybox stop' sudo gerektirmeksizin kullanılabilir.
 func requireRoot() {
-	if syscall.Getuid() == 0 {
-		return // Zaten root
+	if syscall.Geteuid() == 0 {
+		return // Zaten root (Direct or SetUID)
 	}
 	fmt.Println("[*] Root yetkisi gerekiyor, sudo ile yeniden başlatılıyor...")
 	cmd := exec.Command("sudo", append([]string{os.Args[0]}, os.Args[1:]...)...)
