@@ -44,8 +44,8 @@ func GetSystemStatsHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "ready",
-		//"version": os.Getenv("MYBOX_VERSION"), // Sabit 1.0.5 yerine ENV tavsiyesi
-		"version": "1.0.5",
+		//"version": os.Getenv("MYBOX_VERSION"), // Sabit 1.0.7 yerine ENV ile çekilmesi lazım her yerde farklı versiyon var
+		"version": "1.0.7",
 		"storage": targetDir,
 		"metrics": gin.H{
 			"cpu_percent":   cpuUsage,

@@ -43,9 +43,9 @@ if [ ! -f "go.mod" ] || [ ! -d "cmd/main" ]; then
         apt-get install -y git
     fi
     
-    # Depoyu klonla ve mevcut surume gec (version-1.0.6)
+    # Depoyu klonla ve mevcut surume gec (version-1.0.7)
     git clone https://github.com/karahasanoglu/MyBox-Project.git .
-    git checkout version-1.0.6 &> /dev/null
+    git checkout version-1.0.7 &> /dev/null
 fi
 
 # 1. Sistem Bağımlılıklarının Kurulumu

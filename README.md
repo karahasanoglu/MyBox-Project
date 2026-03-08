@@ -6,7 +6,7 @@
  | |\/| | | | |  _ \ / _ \ \/ /
  | |  | | |_| | |_) | (_) >  <
  |_|  |_|\__, |____/ \___/_/\_\
-          |___/  Container Runtime v1.0.4
+          |___/  Container Runtime v1.0.7
 ```
 
 > **MyBox**, Docker'ın temelindeki teknolojileri (Linux Namespaces, Cgroups, Networking)
@@ -461,7 +461,7 @@ Başarılı kurulum çıktısı:
 Artık terminali kapatsanız da `mybox` her yerden çalışır:
 ```bash
 mybox --version
-# MyBox Version: 1.0.0
+# MyBox Version: 1.0.7
 ```
 
 ---
