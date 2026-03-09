@@ -15,7 +15,7 @@
 ---
 
 ### Hızlı Başlangıç & Masaüstü Uygulaması 
-Kurulum adımları ve MyBox Manager görsel arayüzünü indirmek için [resmi sayfamızı](https://verdant-mermaid-fffa0a.netlify.app/) ziyaret edebilirsiniz.
+Kurulum adımları ve MyBox Manager görsel arayüzünü indirmek için [resmi sayfamızı](https://mybox-container.netlify.app/) ziyaret edebilirsiniz.
 
 ## 📌 İçindekiler
 * [Proje Hakkında](#-proje-hakkında)
