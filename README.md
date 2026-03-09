@@ -188,4 +188,3 @@ MyBox, işlemleri şu temel hiyerarşi ile yürütür:
 3. **Network Setup:** Sanal bir kablo (veth-pair) oluşturulur; bir ucu host üzerindeki bridge arayüzüne (`mybox0`) bağlanırken diğer ucu konteyner alanına taşınır.
 4. **Filesystem Isolation:** Özel root filesystem geçici bir klasöre açılır ve `chroot` kullanılarak süreç bu izole alana kilitlenir.
 5. **Execution:** Belirtilen `CMD` komutu, izole ortamda PID 1 olarak çalıştırılır.
-# 🖥 Sistem Gereksinimleri
